@@ -1,0 +1,1 @@
+This is the React, so front-end, code (redevelopment of a much earlier try) for a app that deals with family-trees. The middleware and database logic that accompanies this front-end still needs to be also pushed (initially) to github. 
