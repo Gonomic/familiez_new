@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import TopBar from './TopBar';
 import LeftDrawer from './LeftDrawer';
@@ -30,6 +30,7 @@ const App = () => {
   };
 
   return (
+
     <Router>
 
       <TopBar toggleLeftDrawer={toggleLeftDrawer} toggleRightDrawer={toggleRightDrawer} />
@@ -48,6 +49,7 @@ const App = () => {
 
       <Footer />
     </Router>
+
   );
 }
 

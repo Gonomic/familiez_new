@@ -8,12 +8,38 @@ import debounce from 'lodash/debounce';
 import { EditNotifications } from '@mui/icons-material';
 
 function RightDrawer({ open, onClose }) {
+    const [personTree, setPersonTree] = useState(null);
     const [person, setPerson] = useState(null);
     const [inputValue, setInputValue] = useState("");
     const [persons, setPersons] = useState([]); // State to store fetched persons
+    const isSelectingRef = useRef(false); // Flag to differentiate between input and selection
 
+    // Handle atomic change of Autocomplete field.  
+    const handleInputChange = (event, newInputValue) => {
+        console.log("===> In handleInputChange.");
+        console.log("===> isSelectingRef.current= ", isSelectingRef.current);
+        setInputValue(newInputValue);
+        if (!isSelectingRef.current) { // Only call debouncedGetNames if not selecting a person
+            debouncedGetNames(newInputValue);
+        }
+        isSelectingRef.current = false; // Reset the flag after handling input change
+    };
+
+    // Process each keystroke of Autocomplete field until pause of 1,5 second and then 
+    // start to get data data from server based on string of input chars
+    const debouncedGetNames = useRef(
+        debounce((value) => {
+            console.log("===> In debouncedGetNames.");
+            if (!isSelectingRef.current) {
+                getNamesFromMiddlewareServer(value);
+            }
+        }, 1500)
+    ).current;
+
+    // Get array of names like the string of chars that were typed in in the Autocomplete field.  
     const getNamesFromMiddlewareServer = async (person) => {
         if (!person) return; // Prevent API call if input is empty
+        console.log("===> In getNamesFromMiddlewareServer.")
         try {
             const url = `http://127.0.0.1:8000/GetPersonsLike?stringToSearchFor=${person}`;
             const responseDB = await fetch(url);
@@ -21,43 +47,59 @@ function RightDrawer({ open, onClose }) {
             if (data[0].numberOfRecords >= 1) {
                 setPersons(data.slice(1));
             }
-            EditNotifications
         } catch (error) {
             console.error('Error getting data from API:', error);
         }
     };
 
-    // Use useRef to store the debounced function
-    const debouncedGetNames = useRef(
-        debounce((value) => {
-            getNamesFromMiddlewareServer(value);
-        }, 1000) // Adjust the delay as needed (1000ms in this example)
-    ).current;
-
+    // Handle event where value of complete field is changed 
+    // (not just an character added or removed, thats for InputChange 
     const handlePersonChange = (event, newValue) => {
+        console.log("===> In handlePersonChange.");
         setPerson(newValue);
-        console.log("Hier!!!");
+        isSelectingRef.current = true; // Set the flag to true when a person is selected
+        console.log("===> isSelectingRef.current set to= ", isSelectingRef.current);
+        handlePersonSelected(newValue); // Call the new function when a person is selected
     };
 
-    const handleInputChange = (event, newInputValue) => {
-        setInputValue(newInputValue);
-        debouncedGetNames(newInputValue);
+
+    // Handle a person being selected from the array with alike persons
+    const handlePersonSelected = (selectedPerson) => {
+        console.log("===> In handlePersonSelected.");
+        console.log("===>Selected id of person:", selectedPerson.PersonID);
+        getFamilyTreeOfPerson(selectedPerson)// Add your custom logic here
+    };
+
+    // Get family of the person that was selected from the array of alike persons
+    const getFamilyTreeOfPerson = async (person) => {
+        console.log("===> In getFamilyTreeOfPerson. PersonID= ", person.PersonID);
+        try {
+            const url = `http://127.0.0.1:8000/GetPersonFamilyTree?personToSearchFor=${person.PersonID}`;
+            const responseDB = await fetch(url);
+            const data = await responseDB.json();
+            if (data[0].numberOfRecords >= 1) {
+                setPersonTree(data.slice(1));
+            }
+        } catch (error) {
+            console.error('Error getting data from API:', error);
+        }
     };
 
     // Cleanup the debounced function on component unmount
     useEffect(() => {
         return () => {
+            console.log("===> In useEffect, about to cancel debouncedGetNames");
             debouncedGetNames.cancel();
         };
-    }, [debouncedGetNames, persons]);
+    }, [debouncedGetNames]);
 
     return (
         <div>
             <Drawer anchor="right" open={open} onClose={onClose}>
                 <Box sx={{ display: "flex", justifyContent: "center", padding: 2 }}>
-                    <Typography variant="h5" border={10} borderColor="transparent">
+                    {/* <Typography variant="h5" border={10} borderColor="transparent">
                         Persoon zoeken
-                    </Typography>
+                    </Typography> */}
                 </Box>
 
                 <Box sx={{ display: "flex", flexDirection: "column", marginTop: 5, marginLeft: 5, marginRight: 5, width: 400 }}>
@@ -104,8 +146,6 @@ function RightDrawer({ open, onClose }) {
                         InputProps={{ inputProps: { min: 0, step: 1 } }}
                     />
                 </Box>
-
-
             </Drawer>
         </div>
     );
