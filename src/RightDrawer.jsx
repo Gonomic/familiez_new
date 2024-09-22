@@ -8,11 +8,17 @@ import debounce from 'lodash/debounce';
 import { EditNotifications } from '@mui/icons-material';
 
 function RightDrawer({ open, onClose }) {
-    const [personTree, setPersonTree] = useState(null);
-    const [person, setPerson] = useState(null);
-    const [inputValue, setInputValue] = useState("");
-    const [persons, setPersons] = useState([]); // State to store fetched persons
-    const isSelectingRef = useRef(false); // Flag to differentiate between input and selection
+    const [person, setPerson] = useState(null);                 // State to handle the choosen person in the list of the Autocomlete control
+    const [persons, setPersons] = useState([]);                 // State to store fetched persons that have a name that sounds like what was typed in in the Autocomplete control
+    const [anchorPersons, setAnchorPersons] = useState(null);   // "anchor persons" (core persons for each generation arround which the family tree is build, they make out the trunk of the family tree 
+    const anchorPerson = useRef(null);                          // State to hold the active "core" (or trunk) person arround which the familytree is build in the active step of the proces
+    const [familyTree, setFamilyTree] = useState(null);         // State to hold the family tree of persons
+    const [inputValue, setInputValue] = useState("");           // State to handle character on character input (in this case for the Autocomplete control)
+    const isSelectingRef = useRef(false);                       // Flag to differentiate between input in the Autocomplete control and selection from the list in Autocomplete control
+
+    const [nbrOfParentGenerations, setNbrOfParentGenerations] = useState(0);    // Used to control the lower and upper bounds when looping through generations
+    const [nbrOfChildGenerations, setNbrOfChildGenerations] = useState(0);      // Used to control the lower and upper bounds when looping through generations
+
 
     // Handle atomic change of Autocomplete field.  
     const handleInputChange = (event, newInputValue) => {
@@ -53,7 +59,7 @@ function RightDrawer({ open, onClose }) {
     };
 
     // Handle event where value of complete field is changed 
-    // (not just an character added or removed, thats for InputChange 
+    // (not just an character added or removed, that's for InputChange 
     const handlePersonChange = (event, newValue) => {
         console.log("===> In handlePersonChange.");
         setPerson(newValue);
@@ -62,27 +68,71 @@ function RightDrawer({ open, onClose }) {
         handlePersonSelected(newValue); // Call the new function when a person is selected
     };
 
-
     // Handle a person being selected from the array with alike persons
     const handlePersonSelected = (selectedPerson) => {
         console.log("===> In handlePersonSelected.");
-        console.log("===>Selected id of person:", selectedPerson.PersonID);
-        getFamilyTreeOfPerson(selectedPerson)// Add your custom logic here
+        console.log("===> Selected id of person:", selectedPerson.PersonID);
+        console.log("===> Starting the control procedure to build the family tree.");
+        buildFamilyTree(selectedPerson); // Build the complete family tree
     };
 
-    // Get family of the person that was selected from the array of alike persons
-    const getFamilyTreeOfPerson = async (person) => {
-        console.log("===> In getFamilyTreeOfPerson. PersonID= ", person.PersonID);
+    const buildFamilyTree = async (person) => {
+        console.log("===> In buildingFamilyTree.");
+        console.log("===> Person= ", JSON.stringify(person));
+        console.log("===> PersonID for call to getFather= ", person.PersonID);
+        let Father = await getFather(person.PersonID);
+        console.log("===> Father= ", JSON.stringify(Father));
+        for (let generationRunningIndex = 0; generationRunningIndex <= nbrOfParentGenerations; generationRunningIndex++) {
+            console.log("===> About to get siblings.")
+            const siblings = await getSiblings(Father);
+            console.log("===> Got siblings, siblings= ", JSON.stringify(siblings));
+            setFamilyTree((prevTree) => ({
+                ...prevTree,
+                [Father.PersonID]: siblings
+            }));
+            Father = await getFather(Father);
+            if (!Father) {
+                console.log("---> Build the familyTree. FamilyTree= ", JSON.stringify(familyTree.value));
+                break;
+            }
+        }
+    };
+
+    // Get the father of the anchor person, which by the way will be the next anchor person travelling up the family tree. 
+    const getFather = async (childIdIn) => {
+        console.log("===> In getFather, childIdIn= ", childIdIn);
+        setAnchorPersons(childIdIn);
         try {
-            const url = `http://127.0.0.1:8000/GetPersonFamilyTree?personToSearchFor=${person.PersonID}`;
+            const url = `http://127.0.0.1:8000/GetFather?childID=${childIdIn}`;
             const responseDB = await fetch(url);
             const data = await responseDB.json();
             if (data[0].numberOfRecords >= 1) {
-                setPersonTree(data.slice(1));
+                console.log("Found father. Data to return= ", JSON.stringify(data[1].FatherId));
+                return (data[1].FatherId);
+                //setAnchorPersons(data.slice(1));
             }
         } catch (error) {
             console.error('Error getting data from API:', error);
         }
+        console.log("Found no father. Data to return= 0");
+        return 0;
+    };
+
+    // Get all siblings based on who is the father
+    const getSiblings = async (fatherID) => {
+        console.log("===> In getSiblings. FatherId= ", fatherID);
+        setAnchorPersons(fatherID);
+        try {
+            const url = `http://127.0.0.1:8000/GetSiblings?parentID=${fatherID}`;
+            const responseDB = await fetch(url);
+            const data = await responseDB.json();
+            if (data[0].numberOfRecords >= 1) {
+                return data.slice(1);
+            }
+        } catch (error) {
+            console.error('Error getting data from API:', error);
+        }
+        return [];
     };
 
     // Cleanup the debounced function on component unmount
@@ -132,7 +182,8 @@ function RightDrawer({ open, onClose }) {
                         id="nbrOfParentGenerations"
                         type="number"
                         label="Hoeveel generaties (over groot)ouders"
-                        defaultValue={0}
+                        defaultValue={1}
+                        onChange={(e) => setNbrOfParentGenerations(e.target.value)}
                         InputProps={{ inputProps: { min: 0, step: 1 } }}
                     />
                 </Box>
@@ -143,6 +194,7 @@ function RightDrawer({ open, onClose }) {
                         type="number"
                         label="Hoeveel generaties (achter klein)kinderen"
                         defaultValue={0}
+                        onChange={(e) => setNbrOfChildGenerations(e.target.value)}
                         InputProps={{ inputProps: { min: 0, step: 1 } }}
                     />
                 </Box>
