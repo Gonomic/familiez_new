@@ -10,8 +10,9 @@ import { EditNotifications } from '@mui/icons-material';
 function RightDrawer({ open, onClose }) {
     const [person, setPerson] = useState(null);                 // State to handle the choosen person in the list of the Autocomlete control
     const [persons, setPersons] = useState([]);                 // State to store fetched persons that have a name that sounds like what was typed in in the Autocomplete control
-    const [anchorPersons, setAnchorPersons] = useState(null);   // "anchor persons" (core persons for each generation arround which the family tree is build, they make out the trunk of the family tree 
+    // const [anchorPersons, setAnchorPersons] = useState(null);   // "anchor persons" (core persons for each generation arround which the family tree is build, they make out the trunk of the family tree 
     const anchorPerson = useRef(null);                          // State to hold the active "core" (or trunk) person arround which the familytree is build in the active step of the proces
+    const anchorPersons = useRef([]);                          // State to hold the active "core" (or trunk) person arround which the familytree is build in the active step of the proces
     const [familyTree, setFamilyTree] = useState(null);         // State to hold the family tree of persons
     const [inputValue, setInputValue] = useState("");           // State to handle character on character input (in this case for the Autocomplete control)
     const isSelectingRef = useRef(false);                       // Flag to differentiate between input in the Autocomplete control and selection from the list in Autocomplete control
@@ -90,6 +91,7 @@ function RightDrawer({ open, onClose }) {
                 ...prevTree,
                 [Father.PersonID]: siblings
             }));
+            console.log("===> In buildFamilytree, familyTree= ", JSON.stringify(familyTree.value));
             Father = await getFather(Father);
             if (!Father) {
                 console.log("---> Build the familyTree. FamilyTree= ", JSON.stringify(familyTree.value));
@@ -101,15 +103,16 @@ function RightDrawer({ open, onClose }) {
     // Get the father of the anchor person, which by the way will be the next anchor person travelling up the family tree. 
     const getFather = async (childIdIn) => {
         console.log("===> In getFather, childIdIn= ", childIdIn);
-        setAnchorPersons(childIdIn);
+        // --Kan weg 20 / 10 ? anchorPersons(childIdIn);
         try {
             const url = `http://127.0.0.1:8000/GetFather?childID=${childIdIn}`;
             const responseDB = await fetch(url);
             const data = await responseDB.json();
             if (data[0].numberOfRecords >= 1) {
-                console.log("Found father. Data to return= ", JSON.stringify(data[1].FatherId));
-                return (data[1].FatherId);
-                //setAnchorPersons(data.slice(1));
+                console.log("Found father. Data to return= ", JSON.stringify(data[1].FatherID));
+                anchorPersons.current.push(data.slice(1));
+                console.log("===> anchorPersons in getFather= ", JSON.stringify(anchorPersons));
+                return (data[1].FatherID);
             }
         } catch (error) {
             console.error('Error getting data from API:', error);
@@ -121,7 +124,8 @@ function RightDrawer({ open, onClose }) {
     // Get all siblings based on who is the father
     const getSiblings = async (fatherID) => {
         console.log("===> In getSiblings. FatherId= ", fatherID);
-        setAnchorPersons(fatherID);
+        anchorPersons.current.push(fatherID);
+        console.log("===> anchorPersons in getSiblings= ", JSON.stringify(anchorPersons));
         try {
             const url = `http://127.0.0.1:8000/GetSiblings?parentID=${fatherID}`;
             const responseDB = await fetch(url);
