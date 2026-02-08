@@ -77,13 +77,22 @@ function RightDrawer({ open, onClose }) {
         buildFamilyTree(selectedPerson); // Build the complete family tree
     };
 
+    //Building the familytree on basis of which rendering of the tree will (eventually) take place
     const buildFamilyTree = async (person) => {
         console.log("===> In buildingFamilyTree.");
         console.log("===> Person= ", JSON.stringify(person));
         console.log("===> PersonID for call to getFather= ", person.PersonID);
-        let Father = await getFather(person.PersonID);
-        console.log("===> Father= ", JSON.stringify(Father));
+        anchorPersons.push(person.PersonID);
+        // ======> Hier verder gaan. Gedoe oplossen m.b.t. initit van de loop en gebruik van het vinden van de vader in de voorgaande loop c.q. het toevoegen van een vader in de volgende loop
         for (let generationRunningIndex = 0; generationRunningIndex <= nbrOfParentGenerations; generationRunningIndex++) {
+            let Father = await getFather(person.PersonID);
+            if (!Father) {
+                console.log("---> Build the familyTree. FamilyTree= ", JSON.stringify(familyTree.value));
+                break;
+            }
+            console.log("===> Father= ", JSON.stringify(Father));
+            anchorPersons.current.push(Father);
+            console.log("===> anchorPersons in getFather= ", JSON.stringify(anchorPersons));
             console.log("===> About to get siblings.")
             const siblings = await getSiblings(Father);
             console.log("===> Got siblings, siblings= ", JSON.stringify(siblings));
@@ -92,26 +101,18 @@ function RightDrawer({ open, onClose }) {
                 [Father.PersonID]: siblings
             }));
             console.log("===> In buildFamilytree, familyTree= ", JSON.stringify(familyTree.value));
-            Father = await getFather(Father);
-            if (!Father) {
-                console.log("---> Build the familyTree. FamilyTree= ", JSON.stringify(familyTree.value));
-                break;
-            }
         }
     };
 
     // Get the father of the anchor person, which by the way will be the next anchor person travelling up the family tree. 
     const getFather = async (childIdIn) => {
         console.log("===> In getFather, childIdIn= ", childIdIn);
-        // --Kan weg 20 / 10 ? anchorPersons(childIdIn);
         try {
             const url = `http://127.0.0.1:8000/GetFather?childID=${childIdIn}`;
             const responseDB = await fetch(url);
             const data = await responseDB.json();
             if (data[0].numberOfRecords >= 1) {
                 console.log("Found father. Data to return= ", JSON.stringify(data[1].FatherID));
-                anchorPersons.current.push(data.slice(1));
-                console.log("===> anchorPersons in getFather= ", JSON.stringify(anchorPersons));
                 return (data[1].FatherID);
             }
         } catch (error) {
@@ -124,8 +125,6 @@ function RightDrawer({ open, onClose }) {
     // Get all siblings based on who is the father
     const getSiblings = async (fatherID) => {
         console.log("===> In getSiblings. FatherId= ", fatherID);
-        anchorPersons.current.push(fatherID);
-        console.log("===> anchorPersons in getSiblings= ", JSON.stringify(anchorPersons));
         try {
             const url = `http://127.0.0.1:8000/GetSiblings?parentID=${fatherID}`;
             const responseDB = await fetch(url);
