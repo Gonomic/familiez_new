@@ -1,17 +1,22 @@
-# Use an official Node.js runtime as the base image
-FROM node:22.1.0-bullseye
+## Multi-stage Dockerfile: build static production assets, serve with nginx
+### Stage 1: build
+FROM node:18-bullseye AS build
+WORKDIR /app
 
-# Set the working directory in the Docker image
-WORKDIR /app/familiez
+# Install dependencies using lockfile for reproducible builds
+COPY package.json package-lock.json ./
+RUN npm ci --silent
 
-# Copy all required files from host to image
+# Copy source and build
 COPY . .
+RUN npm run build
 
-#Install all required modules
-RUN npm install 
+### Stage 2: runtime
+FROM nginx:stable-alpine AS runtime
+COPY --from=build /app/dist /usr/share/nginx/html
 
-# Make port 5173 (the default Vite port) available to the world outside this container
-EXPOSE 5173
+# Add nginx configuration for SPA (fallback to index.html)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Run the app when the container launches
-ENTRYPOINT ["npm", "run", "dev", "--", "--host"]
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
