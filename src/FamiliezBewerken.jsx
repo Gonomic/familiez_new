@@ -1,7 +1,9 @@
 import { Box } from '@mui/system';
 import { useState } from 'react';
+import { Paper, Typography } from '@mui/material';
+import PropTypes from 'prop-types';
 
-const FamiliezTree = () => {
+const FamiliezTree = ({ selectedPerson }) => {
 
     let SvgDrawGuide = {
         "RectDefWidth": 120,
@@ -47,6 +49,27 @@ const FamiliezTree = () => {
     return (
         // <button onClick={addPerson}>Persoon toevoegen</button> 
         <Box sx={{ position: 'absolute', top: '64px', bottom: '72px', height: 'calc(100% - 136px)', width: '100%', overflow: 'auto' }}>
+            {selectedPerson && (
+                <Paper elevation={3} sx={{ p: 3, m: 3, maxWidth: 600 }}>
+                    <Typography variant="h5" gutterBottom color="primary">
+                        Geselecteerde Persoon
+                    </Typography>
+                    <Typography variant="body1" sx={{ mt: 2 }}>
+                        <strong>Naam:</strong> {selectedPerson.PersonGivvenName} {selectedPerson.PersonFamilyName}
+                    </Typography>
+                    <Typography variant="body1">
+                        <strong>Geboortedatum:</strong> {selectedPerson.PersonDateOfBirth}
+                    </Typography>
+                    {selectedPerson.PersonDateOfDeath && (
+                        <Typography variant="body1">
+                            <strong>Overlijdensdatum:</strong> {selectedPerson.PersonDateOfDeath}
+                        </Typography>
+                    )}
+                    <Typography variant="body1">
+                        <strong>ID:</strong> {selectedPerson.PersonID}
+                    </Typography>
+                </Paper>
+            )}
             <svg style={{ width: '200%', height: '200%', overflow: 'visible' }}>
 
 
@@ -95,5 +118,9 @@ const FamiliezTree = () => {
         </g>
     );
 }; */}
+
+FamiliezTree.propTypes = {
+    selectedPerson: PropTypes.object,
+};
 
 export default FamiliezTree;

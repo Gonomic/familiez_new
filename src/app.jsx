@@ -12,6 +12,7 @@ import FamiliezSysteem from './FamiliezSysteem';
 const App = () => {
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState(null);
 
   const toggleLeftDrawer = () => {
     setLeftDrawerOpen(!leftDrawerOpen);
@@ -29,17 +30,21 @@ const App = () => {
     setRightDrawerOpen(false);
   };
 
+  const handlePersonSelected = (person) => {
+    setSelectedPerson(person);
+  };
+
   return (
 
     <Router>
 
       <TopBar toggleLeftDrawer={toggleLeftDrawer} toggleRightDrawer={toggleRightDrawer} />
       <LeftDrawer open={leftDrawerOpen} onClose={handleLeftDrawerClose} />
-      <RightDrawer open={rightDrawerOpen} onClose={handleRightDrawerClose} />
+      <RightDrawer open={rightDrawerOpen} onClose={handleRightDrawerClose} onPersonSelected={handlePersonSelected} />
 
 
       <Routes>
-        <Route path="/familiez-bewerken" element={<FamiliezBewerken />} />
+        <Route path="/familiez-bewerken" element={<FamiliezBewerken selectedPerson={selectedPerson} />} />
         <Route path="/familiez-info" element={<FamiliezInfo />} />
         <Route path="/familiez-systeem" element={<FamiliezSysteem />} />
         <Route path="/" element={<Navigate to="/familiez-bewerken" />} />

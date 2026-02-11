@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import { Autocomplete, InputLabel, TextField, Typography, Button } from "@mui/material";
 import Drawer from '@mui/material/Drawer';
@@ -7,7 +7,8 @@ import PropTypes from 'prop-types';
 import debounce from 'lodash/debounce';
 import { EditNotifications } from '@mui/icons-material';
 
-function RightDrawer({ open, onClose }) {
+function RightDrawer({ open, onClose, onPersonSelected }) {
+    const navigate = useNavigate();
     const [person, setPerson] = useState(null);                 // State to handle the choosen person in the list of the Autocomlete control
     const [persons, setPersons] = useState([]);                 // State to store fetched persons that have a name that sounds like what was typed in in the Autocomplete control
     // const [anchorPersons, setAnchorPersons] = useState(null);   // "anchor persons" (core persons for each generation arround which the family tree is build, they make out the trunk of the family tree 
@@ -201,6 +202,24 @@ function RightDrawer({ open, onClose }) {
                         InputProps={{ inputProps: { min: 0, step: 1 } }}
                     />
                 </Box>
+
+                <Box sx={{ display: "flex", justifyContent: "center", marginTop: 5, marginLeft: 5, marginRight: 5, width: 400 }}>
+                    <Button 
+                        variant="contained" 
+                        color="primary"
+                        disabled={!person}
+                        onClick={() => {
+                            if (person) {
+                                onPersonSelected(person);
+                                navigate('/familiez-bewerken');
+                                onClose();
+                            }
+                        }}
+                        fullWidth
+                    >
+                        Bewerk Persoon
+                    </Button>
+                </Box>
             </Drawer>
         </div>
     );
@@ -209,6 +228,7 @@ function RightDrawer({ open, onClose }) {
 RightDrawer.propTypes = {
     open: PropTypes.bool.isRequired,
     onClose: PropTypes.func.isRequired,
+    onPersonSelected: PropTypes.func.isRequired,
 };
 
 export default RightDrawer;
