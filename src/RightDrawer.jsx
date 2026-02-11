@@ -48,7 +48,7 @@ function RightDrawer({ open, onClose }) {
         if (!person) return; // Prevent API call if input is empty
         console.log("===> In getNamesFromMiddlewareServer.")
         try {
-            const url = `http://127.0.0.1:8000/GetPersonsLike?stringToSearchFor=${person}`;
+            const url = `http://localhost:8000/GetPersonsLike?stringToSearchFor=${person}`;
             const responseDB = await fetch(url);
             const data = await responseDB.json();
             if (data[0].numberOfRecords >= 1) {
@@ -108,7 +108,7 @@ function RightDrawer({ open, onClose }) {
     const getFather = async (childIdIn) => {
         console.log("===> In getFather, childIdIn= ", childIdIn);
         try {
-            const url = `http://127.0.0.1:8000/GetFather?childID=${childIdIn}`;
+            const url = `http://localhost:8000/GetFather?childID=${childIdIn}`;
             const responseDB = await fetch(url);
             const data = await responseDB.json();
             if (data[0].numberOfRecords >= 1) {
@@ -126,7 +126,7 @@ function RightDrawer({ open, onClose }) {
     const getSiblings = async (fatherID) => {
         console.log("===> In getSiblings. FatherId= ", fatherID);
         try {
-            const url = `http://127.0.0.1:8000/GetSiblings?parentID=${fatherID}`;
+            const url = `http://localhost:8000/GetSiblings?parentID=${fatherID}`;
             const responseDB = await fetch(url);
             const data = await responseDB.json();
             if (data[0].numberOfRecords >= 1) {
