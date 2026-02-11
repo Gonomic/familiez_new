@@ -20,20 +20,22 @@ const FamiliezSysteem = () => {
 
     const handleButtonClickToPingMW = async () => {
         try {
+            const startTime = Date.now();
             const now = new Date();
             const offset = now.getTimezoneOffset() * 60000; // Offset in milliseconds
-            // const localISOTime = new Date(now - offset).toISOString().slice(0, -1); // Remove the 'Z' at the end
-            const localISOTimeasDate = new Date(now - offset)
-            const localISOTimeAsString = new Date(now - offset).toISOString().slice(0, -1); // Remove the 'Z' at the end
+            const localISOTimeAsString = new Date(now - offset).toISOString().slice(0, -1);
 
             const url = `http://localhost:8000/pingAPI?timestampFE=${localISOTimeAsString}`;
 
             const response = await fetch(url);
             const data = await response.json();
-            MWDtFeReq.value = await data[0]["FE request time"];
-            MWDtMwReq.value = await data[0]["MW request time"];
-            FEFEDtRec.value = new Date(now - offset).toISOString().slice(0, -1);
-            FEFEDtRoundTrip.value = new Date(now - offset) - localISOTimeasDate;
+            const endTime = Date.now();
+            
+            MWDtFeReq.value = data[0]["FE request time"];
+            MWDtMwReq.value = data[0]["MW request time"];
+            const nowAfter = new Date();
+            FEFEDtRec.value = new Date(nowAfter - nowAfter.getTimezoneOffset() * 60000).toISOString().slice(0, -1);
+            FEFEDtRoundTrip.value = `${(endTime - startTime).toFixed(2)} ms`;
 
         } catch (error) {
             console.error('Error getting Ping data from API (calling MW):', error);
@@ -42,22 +44,25 @@ const FamiliezSysteem = () => {
 
     const handleButtonClickToPingDB = async () => {
         try {
+            const startTime = Date.now();
             const now = new Date();
             const offset = now.getTimezoneOffset() * 60000; // Offset in milliseconds
-            const localISOTimeasDate = new Date(now - offset)
-            const localISOTime = new Date(now - offset).toISOString().slice(0, -1); // Remove the 'Z' at the end
+            const localISOTime = new Date(now - offset).toISOString().slice(0, -1);
 
             const url = `http://localhost:8000/pingDB?timestampFE=${localISOTime}`;
 
             const responseDB = await fetch(url);
             const data = await responseDB.json();
-            DBDtFeReq.value = await data[0]["datetimeFErequest"];
-            DBDtMwReq.value = await data[0]["datetimeMWrequest"];
-            DBDtBeReq.value = await data[0]["datetimeBErequest"];
-            DBDtBeAnsw.value = await data[0]["datetimeBEanswer"];
-            DBDtMwAnsw.value = await data[0]["datetimeMWanswer"];
-            DBFEDtRec.value = new Date(now - offset).toISOString().slice(0, -1);
-            DBFEDtRoundTrip.value = new Date(now - offset).getTime() - localISOTimeasDate.getTime();
+            const endTime = Date.now();
+            
+            DBDtFeReq.value = data[0]["datetimeFErequest"];
+            DBDtMwReq.value = data[0]["datetimeMWrequest"];
+            DBDtBeReq.value = data[0]["datetimeBErequest"];
+            DBDtBeAnsw.value = data[0]["datetimeBEanswer"];
+            DBDtMwAnsw.value = data[0]["datetimeMWanswer"];
+            const nowAfter = new Date();
+            DBFEDtRec.value = nowAfter.toISOString().slice(0, -1);
+            DBFEDtRoundTrip.value = `${(endTime - startTime).toFixed(2)} ms`;
 
         } catch (error) {
             console.error('Error getting Ping data from API (calling DB):', error);
