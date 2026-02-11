@@ -26,7 +26,7 @@ const FamiliezSysteem = () => {
             const localISOTimeasDate = new Date(now - offset)
             const localISOTimeAsString = new Date(now - offset).toISOString().slice(0, -1); // Remove the 'Z' at the end
 
-            const url = `http://127.0.0.1:8000/pingAPI?timestampFE=${localISOTimeAsString}`;
+            const url = `http://localhost:8000/pingAPI?timestampFE=${localISOTimeAsString}`;
 
             const response = await fetch(url);
             const data = await response.json();
@@ -47,7 +47,7 @@ const FamiliezSysteem = () => {
             const localISOTimeasDate = new Date(now - offset)
             const localISOTime = new Date(now - offset).toISOString().slice(0, -1); // Remove the 'Z' at the end
 
-            const url = `http://127.0.0.1:8000/pingDB?timestampFE=${localISOTime}`;
+            const url = `http://localhost:8000/pingDB?timestampFE=${localISOTime}`;
 
             const responseDB = await fetch(url);
             const data = await responseDB.json();
