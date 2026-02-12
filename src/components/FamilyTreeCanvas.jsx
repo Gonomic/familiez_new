@@ -19,6 +19,8 @@ const FamilyTreeCanvas = ({
     const [parentsMap, setParentsMap] = useState(new Map()); // childID -> {fatherId, motherId}
     const [partnersMap, setPartnersMap] = useState(new Map()); // personID -> [partnerIDs]
     const [childrenMap, setChildrenMap] = useState(new Map()); // parentID -> [childIDs]
+    const [siblingsMap, setSiblingsMap] = useState(new Map()); // rootPersonID -> [siblingIDs sorted by age]
+    const [canvasSize, setCanvasSize] = useState({ width: 2000, height: 2000 }); // Dynamic canvas size
     const [contextMenu, setContextMenu] = useState(null);
     const [selectedPerson, setSelectedPerson] = useState(null);
     const [draggingPersonId, setDraggingPersonId] = useState(null);
@@ -27,13 +29,31 @@ const FamilyTreeCanvas = ({
     const TRIANGLE_WIDTH = 120;
     const TRIANGLE_HEIGHT = 100;
     const HORIZONTAL_GAP = 160;
-    const VERTICAL_GAP = 150;
+    const VERTICAL_GAP = 300;
 
     /**
      * Build the family tree data structure
      */
     const buildFamilyTree = useCallback(async () => {
-        if (!rootPerson) return;
+        if (!rootPerson) {
+            // Clear all state when no root person is selected
+            setFamilyData(new Map());
+            setPositions(new Map());
+            setParentsMap(new Map());
+            setPartnersMap(new Map());
+            setChildrenMap(new Map());
+            setSiblingsMap(new Map());
+            setCanvasSize({ width: 2000, height: 2000 });
+            return;
+        }
+
+        // Clear existing state before building new tree
+        setFamilyData(new Map());
+        setPositions(new Map());
+        setParentsMap(new Map());
+        setPartnersMap(new Map());
+        setChildrenMap(new Map());
+        setSiblingsMap(new Map());
 
         console.log('=== Building Family Tree ===');
         console.log('Root Person:', rootPerson);
@@ -45,6 +65,7 @@ const FamilyTreeCanvas = ({
         const newParentsMap = new Map();
         const newPartnersMap = new Map();
         const newChildrenMap = new Map();
+        const newSiblingsMap = new Map();
 
         // Helper to add person to data
         const addPerson = async (personId, generation) => {
@@ -64,6 +85,87 @@ const FamilyTreeCanvas = ({
 
         // Start with root person
         await addPerson(rootPerson.PersonID, 0);
+        
+        // Get siblings of root person
+        const rootFatherId = await getFather(rootPerson.PersonID);
+        const rootMotherId = await getMother(rootPerson.PersonID);
+        
+        if (rootFatherId || rootMotherId) {
+            console.log('=== Getting siblings of root person ===');
+            const allSiblings = [];
+            
+            // Get children from father (if exists)
+            if (rootFatherId) {
+                const fatherChildren = await getChildren(rootFatherId);
+                if (fatherChildren) {
+                    allSiblings.push(...fatherChildren);
+                }
+            }
+            
+            // Get children from mother (if exists) - avoid duplicates
+            if (rootMotherId) {
+                const motherChildren = await getChildren(rootMotherId);
+                if (motherChildren) {
+                    motherChildren.forEach(child => {
+                        if (!allSiblings.find(s => s.PersonID === child.PersonID)) {
+                            allSiblings.push(child);
+                        }
+                    });
+                }
+            }
+            
+            // Filter out root person and sort by birth date
+            const siblings = allSiblings
+                .filter(s => s.PersonID !== rootPerson.PersonID)
+                .sort((a, b) => {
+                    const dateA = new Date(a.PersonDateOfBirth || '9999-12-31');
+                    const dateB = new Date(b.PersonDateOfBirth || '9999-12-31');
+                    return dateA - dateB; // Oldest first
+                });
+            
+            console.log('Found siblings:', siblings.length);
+            
+            // Add siblings to family data
+            for (const sibling of siblings) {
+                await addPerson(sibling.PersonID, 0); // Same generation as root
+                
+                // Set parent relationship for sibling
+                newParentsMap.set(sibling.PersonID, {
+                    fatherId: rootFatherId || null,
+                    motherId: rootMotherId || null
+                });
+                
+                // Get partners of sibling
+                const siblingPartners = await getPartners(sibling.PersonID);
+                if (siblingPartners && siblingPartners.length > 0) {
+                    for (const partner of siblingPartners) {
+                        await addPerson(partner.PersonID, 0); // Same generation
+                        
+                        // Set partner relationship
+                        if (!newPartnersMap.has(sibling.PersonID)) {
+                            newPartnersMap.set(sibling.PersonID, []);
+                        }
+                        if (!newPartnersMap.get(sibling.PersonID).includes(partner.PersonID)) {
+                            newPartnersMap.get(sibling.PersonID).push(partner.PersonID);
+                        }
+                        
+                        if (!newPartnersMap.has(partner.PersonID)) {
+                            newPartnersMap.set(partner.PersonID, []);
+                        }
+                        if (!newPartnersMap.get(partner.PersonID).includes(sibling.PersonID)) {
+                            newPartnersMap.get(partner.PersonID).push(sibling.PersonID);
+                        }
+                        
+                        console.log(`Added partner ${partner.PersonID} for sibling ${sibling.PersonID}`);
+                    }
+                }
+            }
+            
+            // Store siblings list
+            if (siblings.length > 0) {
+                newSiblingsMap.set(rootPerson.PersonID, siblings.map(s => s.PersonID));
+            }
+        }
         
         // Build upward (parents)
         const buildUpward = async (personId, currentGen) => {
@@ -125,13 +227,42 @@ const FamilyTreeCanvas = ({
                 for (const child of childrenData) {
                     await addPerson(child.PersonID, currentGen - 1);
                     
-                    // Also check for the other parent
-                    const existingRelation = newParentsMap.get(child.PersonID);
-                    if (!existingRelation) {
-                        newParentsMap.set(child.PersonID, {
-                            fatherId: null,
-                            motherId: null
-                        });
+                    // Get the father and mother of this child to establish proper parent relationships
+                    const childFatherId = await getFather(child.PersonID);
+                    const childMotherId = await getMother(child.PersonID);
+                    
+                    console.log(`Child ${child.PersonID} has father ${childFatherId} and mother ${childMotherId}`);
+                    
+                    // Set parent relationship for this child
+                    newParentsMap.set(child.PersonID, {
+                        fatherId: childFatherId || null,
+                        motherId: childMotherId || null
+                    });
+                    
+                    // If we haven't added the parents yet, add them
+                    if (childFatherId && !newFamilyData.has(childFatherId)) {
+                        await addPerson(childFatherId, currentGen);
+                    }
+                    if (childMotherId && !newFamilyData.has(childMotherId)) {
+                        await addPerson(childMotherId, currentGen);
+                    }
+                    
+                    // If both parents exist, they are partners
+                    if (childFatherId && childMotherId) {
+                        if (!newPartnersMap.has(childFatherId)) {
+                            newPartnersMap.set(childFatherId, []);
+                        }
+                        if (!newPartnersMap.get(childFatherId).includes(childMotherId)) {
+                            newPartnersMap.get(childFatherId).push(childMotherId);
+                        }
+                        
+                        if (!newPartnersMap.has(childMotherId)) {
+                            newPartnersMap.set(childMotherId, []);
+                        }
+                        if (!newPartnersMap.get(childMotherId).includes(childFatherId)) {
+                            newPartnersMap.get(childMotherId).push(childFatherId);
+                        }
+                        console.log(`Set partner relationship between ${childFatherId} and ${childMotherId}`);
                     }
                     
                     await buildDownward(child.PersonID, currentGen - 1);
@@ -147,8 +278,8 @@ const FamilyTreeCanvas = ({
         console.log('Relationships parents:', Array.from(newParentsMap.entries()));
         console.log('Relationships partners:', Array.from(newPartnersMap.entries()));
 
-        // Calculate positions
-        calculatePositions(newFamilyData, newParentsMap, newPartnersMap, newPositions);
+        // Calculate positions and canvas size
+        const canvasDimensions = calculatePositions(newFamilyData, newParentsMap, newPartnersMap, newSiblingsMap, rootPerson.PersonID, newPositions);
 
         console.log('Positions calculated:', newPositions.size, 'positions');
         console.log('=== Family Tree Built Successfully ===');
@@ -157,15 +288,44 @@ const FamilyTreeCanvas = ({
         setParentsMap(newParentsMap);
         setPartnersMap(newPartnersMap);
         setChildrenMap(newChildrenMap);
+        setSiblingsMap(newSiblingsMap);
         setPositions(newPositions);
+        setCanvasSize(canvasDimensions);
     }, [rootPerson, nbrOfParentGenerations, nbrOfChildGenerations]);
 
     /**
      * Calculate positions for all persons
      */
-    const calculatePositions = (familyData, parentsMap, partnersMap, positions) => {
+    const calculatePositions = (familyData, parentsMap, partnersMap, siblingsMap, rootPersonId, positions) => {
         const centerX = 500;
-        const centerY = 400;
+        
+        // Helper function to position a couple with man on the left
+        const positionCouple = (personId, partnerId, x, y, positions, positioned) => {
+            const person = familyData.get(personId);
+            const partner = familyData.get(partnerId);
+            
+            // Determine who goes left (man) and who goes right (woman)
+            let leftPerson, rightPerson;
+            
+            if (person?.PersonIsMale && !partner?.PersonIsMale) {
+                // Person is male, partner is female -> person left
+                leftPerson = personId;
+                rightPerson = partnerId;
+            } else if (!person?.PersonIsMale && partner?.PersonIsMale) {
+                // Person is female, partner is male -> partner left
+                leftPerson = partnerId;
+                rightPerson = personId;
+            } else {
+                // Same gender or unknown -> keep original order
+                leftPerson = personId;
+                rightPerson = partnerId;
+            }
+            
+            positions.set(leftPerson, { x: x, y });
+            positions.set(rightPerson, { x: x + TRIANGLE_WIDTH, y });
+            positioned.add(personId);
+            positioned.add(partnerId);
+        };
         
         // Group persons by generation
         const generations = new Map();
@@ -176,6 +336,17 @@ const FamilyTreeCanvas = ({
             }
             generations.get(gen).push(personId);
         });
+        
+        // Calculate centerY dynamically based on the highest generation
+        // This ensures all generations fit on the canvas
+        const maxGeneration = Math.max(...generations.keys());
+        const minGeneration = Math.min(...generations.keys());
+        const TOP_MARGIN = 200; // Minimum space from top of canvas
+        
+        // Position centerY so that the highest generation has TOP_MARGIN from top
+        const centerY = TOP_MARGIN + (maxGeneration * VERTICAL_GAP);
+        
+        console.log(`Positioning: maxGen=${maxGeneration}, minGen=${minGeneration}, centerY=${centerY}`);
 
         // Position each generation
         const sortedGenerations = Array.from(generations.keys()).sort((a, b) => b - a);
@@ -184,7 +355,91 @@ const FamilyTreeCanvas = ({
             const personsInGen = generations.get(gen);
             const y = centerY - (gen * VERTICAL_GAP);
             
-            // Check for partner pairs
+            // Special handling for generation 0 (root person with siblings)
+            if (gen === 0 && siblingsMap.has(rootPersonId)) {
+                console.log('=== Positioning generation 0 with siblings ===');
+                const positioned = new Set();
+                const siblingIds = siblingsMap.get(rootPersonId);
+                
+                // Get birth date of root person for comparison
+                const rootBirthDate = new Date(familyData.get(rootPersonId)?.PersonDateOfBirth || '9999-12-31');
+                
+                // Split siblings into younger (left) and older (right)
+                const youngerSiblings = [];
+                const olderSiblings = [];
+                
+                siblingIds.forEach(sibId => {
+                    const sibBirthDate = new Date(familyData.get(sibId)?.PersonDateOfBirth || '9999-12-31');
+                    if (sibBirthDate < rootBirthDate) {
+                        olderSiblings.push(sibId); // Born earlier = older
+                    } else {
+                        youngerSiblings.push(sibId);
+                    }
+                });
+                
+                console.log('Younger siblings:', youngerSiblings);
+                console.log('Older siblings:', olderSiblings);
+                
+                // Position root person in center
+                let currentX = centerX;
+                
+                // Position root person and their partner (if any)
+                const rootPartners = partnersMap.get(rootPersonId) || [];
+                const rootPartnerInGen = rootPartners.find(partnerId => 
+                    generations.get(gen)?.includes(partnerId)
+                );
+                
+                if (rootPartnerInGen) {
+                    positionCouple(rootPersonId, rootPartnerInGen, currentX, y, positions, positioned);
+                } else {
+                    positions.set(rootPersonId, { x: currentX, y });
+                    positioned.add(rootPersonId);
+                }
+                
+                // Position older siblings to the right
+                currentX = centerX + (rootPartnerInGen ? TRIANGLE_WIDTH * 2 + HORIZONTAL_GAP : HORIZONTAL_GAP);
+                olderSiblings.forEach(sibId => {
+                    if (positioned.has(sibId)) return;
+                    
+                    const partners = partnersMap.get(sibId) || [];
+                    const partnerInGen = partners.find(partnerId => 
+                        generations.get(gen)?.includes(partnerId)
+                    );
+                    
+                    if (partnerInGen && !positioned.has(partnerInGen)) {
+                        positionCouple(sibId, partnerInGen, currentX, y, positions, positioned);
+                        currentX += (TRIANGLE_WIDTH * 2) + HORIZONTAL_GAP;
+                    } else if (!positioned.has(sibId)) {
+                        positions.set(sibId, { x: currentX, y });
+                        positioned.add(sibId);
+                        currentX += HORIZONTAL_GAP;
+                    }
+                });
+                
+                // Position younger siblings to the left (reverse order)
+                currentX = centerX - HORIZONTAL_GAP;
+                youngerSiblings.reverse().forEach(sibId => {
+                    if (positioned.has(sibId)) return;
+                    
+                    const partners = partnersMap.get(sibId) || [];
+                    const partnerInGen = partners.find(partnerId => 
+                        generations.get(gen)?.includes(partnerId)
+                    );
+                    
+                    if (partnerInGen && !positioned.has(partnerInGen)) {
+                        positionCouple(sibId, partnerInGen, currentX - TRIANGLE_WIDTH, y, positions, positioned);
+                        currentX -= (TRIANGLE_WIDTH * 2) + HORIZONTAL_GAP;
+                    } else if (!positioned.has(sibId)) {
+                        positions.set(sibId, { x: currentX, y });
+                        positioned.add(sibId);
+                        currentX -= HORIZONTAL_GAP;
+                    }
+                });
+                
+                return; // Skip default positioning for this generation
+            }
+            
+            // Default positioning for other generations
             const positioned = new Set();
             let currentX = centerX - ((personsInGen.length - 1) * HORIZONTAL_GAP) / 2;
             
@@ -198,13 +453,8 @@ const FamilyTreeCanvas = ({
                 );
                 
                 if (partnerInGen && !positioned.has(partnerInGen)) {
-                    // Position as couple - bovenpunten moeten tegen elkaar aan liggen
-                    // Persoon 1 op currentX, persoon 2 op currentX + TRIANGLE_WIDTH
-                    // Zo raakt rechter bovenpunt van persoon 1 het linker bovenpunt van persoon 2
-                    positions.set(personId, { x: currentX, y });
-                    positions.set(partnerInGen, { x: currentX + TRIANGLE_WIDTH, y });
-                    positioned.add(personId);
-                    positioned.add(partnerInGen);
+                    // Position as couple - man on the left
+                    positionCouple(personId, partnerInGen, currentX, y, positions, positioned);
                     // Verhoog currentX met breedte van beide driehoeken plus gap naar volgende persoon
                     currentX += (TRIANGLE_WIDTH * 2) + HORIZONTAL_GAP;
                 } else if (!positioned.has(personId)) {
@@ -215,6 +465,27 @@ const FamilyTreeCanvas = ({
                 }
             });
         });
+        
+        // Calculate required canvas dimensions
+        let maxX = 0;
+        let maxY = 0;
+        let minX = Infinity;
+        let minY = Infinity;
+        
+        positions.forEach(pos => {
+            maxX = Math.max(maxX, pos.x + TRIANGLE_WIDTH / 2);
+            maxY = Math.max(maxY, pos.y + TRIANGLE_HEIGHT);
+            minX = Math.min(minX, pos.x - TRIANGLE_WIDTH / 2);
+            minY = Math.min(minY, pos.y);
+        });
+        
+        const CANVAS_PADDING = 200; // Extra padding around the tree
+        const canvasWidth = Math.max(2000, maxX - minX + CANVAS_PADDING * 2);
+        const canvasHeight = Math.max(2000, maxY - minY + CANVAS_PADDING * 2);
+        
+        console.log(`Canvas dimensions: ${canvasWidth}x${canvasHeight}`);
+        
+        return { width: canvasWidth, height: canvasHeight };
     };
 
     /**
@@ -306,8 +577,9 @@ const FamilyTreeCanvas = ({
                             y1={fatherBottomY}
                             x2={childLeftX}
                             y2={childTopY}
-                            stroke="#1976d2"
+                            stroke="#2196F3"
                             strokeWidth="2"
+                            strokeDasharray="5,5"
                         />
                     );
                 }
@@ -328,8 +600,9 @@ const FamilyTreeCanvas = ({
                             y1={motherBottomY}
                             x2={childRightX}
                             y2={childTopY}
-                            stroke="#1976d2"
+                            stroke="#E91E63"
                             strokeWidth="2"
+                            strokeDasharray="5,5"
                         />
                     );
                 }
@@ -360,9 +633,8 @@ const FamilyTreeCanvas = ({
                             y1={person1BottomY}
                             x2={person2BottomX}
                             y2={person2BottomY}
-                            stroke="#d32f2f"
+                            stroke="#808080"
                             strokeWidth="2"
-                            strokeDasharray="5,5"
                         />
                     );
                 }
@@ -403,8 +675,8 @@ const FamilyTreeCanvas = ({
         <div style={{ width: '100%', height: '100%', overflow: 'auto' }}>
             <svg 
                 style={{ 
-                    width: '2000px', 
-                    height: '2000px',
+                    width: `${canvasSize.width}px`, 
+                    height: `${canvasSize.height}px`,
                     minWidth: '100%',
                     minHeight: '100%'
                 }}
