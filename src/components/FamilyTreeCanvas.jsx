@@ -706,6 +706,7 @@ const FamilyTreeCanvas = ({
                                 draggingPersonId && 
                                 partnersMap.get(draggingPersonId)?.includes(personId)
                             }
+                            isRootPerson={personId === rootPerson?.PersonID}
                         />
                     );
                 })}
