@@ -18,7 +18,8 @@ const PersonTriangle = ({
     onClick,
     partners = [],
     isPartnerDragging = false,
-    isRootPerson = false
+    isRootPerson = false,
+    isSelected = false
 }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -143,7 +144,7 @@ const PersonTriangle = ({
             {/* Main triangle shape */}
             <polygon
                 points={points}
-                fill={isRootPerson ? "#FFEB3B" : "white"}
+                fill={isSelected ? "#E0E0E0" : (isRootPerson ? "#FFEB3B" : "white")}
                 stroke="#1976d2"
                 strokeWidth="2"
                 style={{
@@ -256,6 +257,7 @@ PersonTriangle.propTypes = {
     partners: PropTypes.array,
     isPartnerDragging: PropTypes.bool,
     isRootPerson: PropTypes.bool,
+    isSelected: PropTypes.bool,
 };
 
 export default PersonTriangle;
