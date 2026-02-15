@@ -10,7 +10,7 @@ import PersonDeleteForm from './components/PersonDeleteForm';
 import PersonAddForm from './components/PersonAddForm';
 import { getPersonsLike } from './services/familyDataService';
 
-function RightDrawer({ open, onClose, onPersonSelected, personToEdit, onPersonUpdated, personToDelete, personToAdd, onPersonDeleted }) {
+function RightDrawer({ open, onClose, onPersonSelected, personToEdit, onPersonUpdated, personToDelete, personToAdd, onPersonAdded, onPersonDeleted }) {
     const navigate = useNavigate();
     const [person, setPerson] = useState(null);
     const [persons, setPersons] = useState([]);
@@ -18,8 +18,8 @@ function RightDrawer({ open, onClose, onPersonSelected, personToEdit, onPersonUp
     const isSelectingRef = useRef(false);
     const [mode, setMode] = useState('select'); // 'select', 'edit', 'delete', 'add'
 
-    const [nbrOfParentGenerations, setNbrOfParentGenerations] = useState(1);
-    const [nbrOfChildGenerations, setNbrOfChildGenerations] = useState(1);
+    const [nbrOfParentGenerations, setNbrOfParentGenerations] = useState('1');
+    const [nbrOfChildGenerations, setNbrOfChildGenerations] = useState('1');
 
     // Update mode when personToEdit, personToDelete, or personToAdd changes
     useEffect(() => {
@@ -62,9 +62,28 @@ function RightDrawer({ open, onClose, onPersonSelected, personToEdit, onPersonUp
     // Handle person selected to build tree
     const handleBuildTree = () => {
         if (person && onPersonSelected) {
-            onPersonSelected(person, nbrOfParentGenerations, nbrOfChildGenerations);
+            const parentGens = Number.isFinite(Number(nbrOfParentGenerations))
+                ? Number(nbrOfParentGenerations)
+                : 0;
+            const childGens = Number.isFinite(Number(nbrOfChildGenerations))
+                ? Number(nbrOfChildGenerations)
+                : 0;
+            onPersonSelected(person, parentGens, childGens);
             navigate('/familiez-bewerken');
             onClose();
+        }
+    };
+
+    const handleNumericChange = (setter) => (event) => {
+        const { value } = event.target;
+        if (value === '') {
+            setter('');
+            return;
+        }
+
+        const parsed = parseInt(value, 10);
+        if (Number.isFinite(parsed)) {
+            setter(String(parsed));
         }
     };
 
@@ -101,8 +120,8 @@ function RightDrawer({ open, onClose, onPersonSelected, personToEdit, onPersonUp
     // Handle person added
     const handlePersonAdded = (newPerson) => {
         setMode('select');
-        if (onPersonUpdated) {
-            onPersonUpdated(newPerson);
+        if (onPersonAdded) {
+            onPersonAdded(newPerson);
         }
         onClose();
     };
@@ -155,7 +174,8 @@ function RightDrawer({ open, onClose, onPersonSelected, personToEdit, onPersonUp
                                 type="number"
                                 label="Hoeveel generaties (over groot)ouders"
                                 value={nbrOfParentGenerations}
-                                onChange={(e) => setNbrOfParentGenerations(parseInt(e.target.value) || 0)}
+                                onChange={handleNumericChange(setNbrOfParentGenerations)}
+                                onFocus={(e) => e.target.select()}
                                 InputProps={{ inputProps: { min: 0, step: 1 } }}
                                 fullWidth
                                 sx={{ mb: 2 }}
@@ -165,7 +185,8 @@ function RightDrawer({ open, onClose, onPersonSelected, personToEdit, onPersonUp
                                 type="number"
                                 label="Hoeveel generaties (achter klein)kinderen"
                                 value={nbrOfChildGenerations}
-                                onChange={(e) => setNbrOfChildGenerations(parseInt(e.target.value) || 0)}
+                                onChange={handleNumericChange(setNbrOfChildGenerations)}
+                                onFocus={(e) => e.target.select()}
                                 InputProps={{ inputProps: { min: 0, step: 1 } }}
                                 fullWidth
                                 sx={{ mb: 3 }}
@@ -220,6 +241,7 @@ RightDrawer.propTypes = {
     onPersonUpdated: PropTypes.func,
     personToDelete: PropTypes.object,
     personToAdd: PropTypes.object,
+    onPersonAdded: PropTypes.func,
     onPersonDeleted: PropTypes.func,
 };
 

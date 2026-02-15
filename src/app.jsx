@@ -18,6 +18,7 @@ const App = () => {
   const [personToAdd, setPersonToAdd] = useState(null);
   const [nbrOfParentGenerations, setNbrOfParentGenerations] = useState(1);
   const [nbrOfChildGenerations, setNbrOfChildGenerations] = useState(1);
+  const [treeRefreshTrigger, setTreeRefreshTrigger] = useState(0);
 
   const toggleLeftDrawer = () => {
     setLeftDrawerOpen(!leftDrawerOpen);
@@ -66,14 +67,26 @@ const App = () => {
       if (selectedPerson && selectedPerson.PersonID === updatedPerson.PersonID) {
         setSelectedPerson(updatedPerson);
       }
+      // Trigger tree refresh
+      setTreeRefreshTrigger(prev => prev + 1);
     }
     // Clear edit mode
     setPersonToEdit(null);
   };
 
+  const handlePersonAdded = (newPerson) => {
+    // Trigger tree refresh after adding a person
+    if (newPerson) {
+      setTreeRefreshTrigger(prev => prev + 1);
+    }
+    // Clear add mode
+    setPersonToAdd(null);
+  };
+
   const handlePersonDeleted = () => {
-    // Rebuild the tree after deletion
-    // For now, just close the drawer
+    // Trigger tree refresh after deletion
+    setTreeRefreshTrigger(prev => prev + 1);
+    // Clear delete mode
     setPersonToDelete(null);
   };
 
@@ -90,6 +103,7 @@ const App = () => {
         personToDelete={personToDelete}
         personToAdd={personToAdd}
         onPersonUpdated={handlePersonUpdated}
+        onPersonAdded={handlePersonAdded}
         onPersonDeleted={handlePersonDeleted}
       />
 
@@ -101,6 +115,7 @@ const App = () => {
               selectedPerson={selectedPerson}
               nbrOfParentGenerations={nbrOfParentGenerations}
               nbrOfChildGenerations={nbrOfChildGenerations}
+              treeRefreshTrigger={treeRefreshTrigger}
               onEditPerson={handleEditPerson}
               onDeletePerson={handleDeletePerson}
               onAddPerson={handleAddPerson}

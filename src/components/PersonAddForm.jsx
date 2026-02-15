@@ -63,6 +63,12 @@ const PersonAddForm = ({ parentPerson, onAdd, onCancel }) => {
             setError('Achternaam is verplicht.');
             return;
         }
+        
+        if (!formData.PersonPlaceOfBirth || !formData.PersonPlaceOfBirth.trim()) {
+            setError('Geboorteplaats is verplicht.');
+            return;
+        }
+
 
         setIsSaving(true);
         setError(null);
@@ -160,6 +166,7 @@ const PersonAddForm = ({ parentPerson, onAdd, onCancel }) => {
                 value={formData.PersonPlaceOfBirth}
                 onChange={handleChange('PersonPlaceOfBirth')}
                 fullWidth
+                required
                 disabled={isSaving}
             />
 

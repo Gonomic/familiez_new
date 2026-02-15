@@ -12,6 +12,7 @@ const FamilyTreeCanvas = ({
     rootPerson, 
     nbrOfParentGenerations = 1, 
     nbrOfChildGenerations = 1,
+    treeRefreshTrigger = 0,
     onEditPerson,
     onDeletePerson,
     onAddPerson
@@ -217,8 +218,8 @@ const FamilyTreeCanvas = ({
         };
 
         // Build downward (children)
-        const buildDownward = async (personId, currentGen) => {
-            if (currentGen >= nbrOfChildGenerations) return;
+        const buildDownward = async (personId, depth) => {
+            if (depth >= nbrOfChildGenerations) return;
             
             const childrenData = await getChildren(personId);
             
@@ -227,7 +228,8 @@ const FamilyTreeCanvas = ({
                 newChildrenMap.set(personId, childIds);
                 
                 for (const child of childrenData) {
-                    await addPerson(child.PersonID, currentGen - 1);
+                    const childGeneration = -(depth + 1);
+                    await addPerson(child.PersonID, childGeneration);
                     
                     // Get the father and mother of this child to establish proper parent relationships
                     const childFatherId = await getFather(child.PersonID);
@@ -243,10 +245,10 @@ const FamilyTreeCanvas = ({
                     
                     // If we haven't added the parents yet, add them
                     if (childFatherId && !newFamilyData.has(childFatherId)) {
-                        await addPerson(childFatherId, currentGen);
+                        await addPerson(childFatherId, -depth);
                     }
                     if (childMotherId && !newFamilyData.has(childMotherId)) {
-                        await addPerson(childMotherId, currentGen);
+                        await addPerson(childMotherId, -depth);
                     }
                     
                     // If both parents exist, they are partners
@@ -267,7 +269,7 @@ const FamilyTreeCanvas = ({
                         console.log(`Set partner relationship between ${childFatherId} and ${childMotherId}`);
                     }
                     
-                    await buildDownward(child.PersonID, currentGen - 1);
+                    await buildDownward(child.PersonID, depth + 1);
                 }
             }
         };
@@ -293,7 +295,7 @@ const FamilyTreeCanvas = ({
         setSiblingsMap(newSiblingsMap);
         setPositions(newPositions);
         setCanvasSize(canvasDimensions);
-    }, [rootPerson, nbrOfParentGenerations, nbrOfChildGenerations]);
+    }, [rootPerson, nbrOfParentGenerations, nbrOfChildGenerations, treeRefreshTrigger]);
 
     /**
      * Calculate positions for all persons
@@ -754,6 +756,7 @@ FamilyTreeCanvas.propTypes = {
     }),
     nbrOfParentGenerations: PropTypes.number,
     nbrOfChildGenerations: PropTypes.number,
+    treeRefreshTrigger: PropTypes.number,
     onEditPerson: PropTypes.func,
     onDeletePerson: PropTypes.func,
     onAddPerson: PropTypes.func,

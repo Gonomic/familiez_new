@@ -171,10 +171,10 @@ export const updatePerson = async (personId, personData) => {
 };
 /**
  * Delete a person and all their relationships
- * @param {number} personId - The ID of the person to delete
+ * @param {Object} person - The person object with ID and Timestamp
  * @returns {Promise<boolean>} Success status
  */
-export const deletePerson = async (personId) => {
+export const deletePerson = async (person) => {
     try {
         const url = `${MW_BASE_URL}/DeletePerson`;
         const response = await fetch(url, {
@@ -182,7 +182,13 @@ export const deletePerson = async (personId) => {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ personId }),
+            body: JSON.stringify({
+                personId: person.PersonID,
+                Timestamp: person.Timestamp,
+                MotherId: person.MotherId || null,
+                FatherId: person.FatherId || null,
+                PartnerId: person.PartnerId || null
+            }),
         });
         const data = await response.json();
         return data.success || false;

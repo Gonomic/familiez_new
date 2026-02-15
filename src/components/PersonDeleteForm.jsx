@@ -16,7 +16,15 @@ const PersonDeleteForm = ({ person, onDelete, onCancel }) => {
         setError(null);
 
         try {
-            const success = await deletePerson(person.PersonID);
+            console.log('Deleting person:', person);
+            if (!person.Timestamp) {
+                console.error('Person object missing Timestamp:', person);
+                setError('Kan persoon niet verwijderen: timestamp ontbreekt. Herlaad de stamboom.');
+                setIsDeleting(false);
+                return;
+            }
+            
+            const success = await deletePerson(person);
             if (success) {
                 if (onDelete) {
                     onDelete();
