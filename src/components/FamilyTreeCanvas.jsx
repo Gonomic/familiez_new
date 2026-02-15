@@ -12,7 +12,9 @@ const FamilyTreeCanvas = ({
     rootPerson, 
     nbrOfParentGenerations = 1, 
     nbrOfChildGenerations = 1,
-    onEditPerson 
+    onEditPerson,
+    onDeletePerson,
+    onAddPerson
 }) => {
     const [familyData, setFamilyData] = useState(new Map()); // Map of PersonID -> person data
     const [positions, setPositions] = useState(new Map()); // Map of PersonID -> {x, y}
@@ -539,6 +541,24 @@ const FamilyTreeCanvas = ({
     };
 
     /**
+     * Handle delete person
+     */
+    const handleDeletePerson = (person) => {
+        if (onDeletePerson) {
+            onDeletePerson(person);
+        }
+    };
+
+    /**
+     * Handle add person
+     */
+    const handleAddPerson = (person) => {
+        if (onAddPerson) {
+            onAddPerson(person);
+        }
+    };
+
+    /**
      * Draw connection lines
      */
     const renderConnectionLines = () => {
@@ -717,6 +737,8 @@ const FamilyTreeCanvas = ({
                 anchorPosition={contextMenu}
                 onClose={handleCloseContextMenu}
                 onEditPerson={handleEditPerson}
+                onDeletePerson={handleDeletePerson}
+                onAddPerson={handleAddPerson}
                 person={selectedPerson}
             />
         </div>
@@ -733,6 +755,8 @@ FamilyTreeCanvas.propTypes = {
     nbrOfParentGenerations: PropTypes.number,
     nbrOfChildGenerations: PropTypes.number,
     onEditPerson: PropTypes.func,
+    onDeletePerson: PropTypes.func,
+    onAddPerson: PropTypes.func,
 };
 
 export default FamilyTreeCanvas;

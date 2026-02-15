@@ -14,6 +14,8 @@ const App = () => {
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [personToEdit, setPersonToEdit] = useState(null);
+  const [personToDelete, setPersonToDelete] = useState(null);
+  const [personToAdd, setPersonToAdd] = useState(null);
   const [nbrOfParentGenerations, setNbrOfParentGenerations] = useState(1);
   const [nbrOfChildGenerations, setNbrOfChildGenerations] = useState(1);
 
@@ -31,8 +33,10 @@ const App = () => {
 
   const handleRightDrawerClose = () => {
     setRightDrawerOpen(false);
-    // Clear edit mode when drawer closes
+    // Clear edit/delete/add modes when drawer closes
     setPersonToEdit(null);
+    setPersonToDelete(null);
+    setPersonToAdd(null);
   };
 
   const handlePersonSelected = (person, parentGens, childGens) => {
@@ -43,6 +47,16 @@ const App = () => {
 
   const handleEditPerson = (person) => {
     setPersonToEdit(person);
+    setRightDrawerOpen(true);
+  };
+
+  const handleDeletePerson = (person) => {
+    setPersonToDelete(person);
+    setRightDrawerOpen(true);
+  };
+
+  const handleAddPerson = (person) => {
+    setPersonToAdd(person);
     setRightDrawerOpen(true);
   };
 
@@ -57,6 +71,13 @@ const App = () => {
     setPersonToEdit(null);
   };
 
+  const handlePersonDeleted = () => {
+    // Rebuild the tree after deletion
+    // For now, just close the drawer
+    setPersonToDelete(null);
+  };
+
+
   return (
     <Router>
       <TopBar toggleLeftDrawer={toggleLeftDrawer} toggleRightDrawer={toggleRightDrawer} />
@@ -66,7 +87,10 @@ const App = () => {
         onClose={handleRightDrawerClose} 
         onPersonSelected={handlePersonSelected}
         personToEdit={personToEdit}
+        personToDelete={personToDelete}
+        personToAdd={personToAdd}
         onPersonUpdated={handlePersonUpdated}
+        onPersonDeleted={handlePersonDeleted}
       />
 
       <Routes>
@@ -78,6 +102,8 @@ const App = () => {
               nbrOfParentGenerations={nbrOfParentGenerations}
               nbrOfChildGenerations={nbrOfChildGenerations}
               onEditPerson={handleEditPerson}
+              onDeletePerson={handleDeletePerson}
+              onAddPerson={handleAddPerson}
             />
           } 
         />

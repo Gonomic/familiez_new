@@ -1,14 +1,13 @@
+version: "3.8"
+
 services:
-  familiez-tst-frontend:
+  fe:
     build:
-      context: C:\Users\FransDekkers\Documents\Docker\react\familiez
-      dockerfile: Dockerfile
-    image: fransdekkers/familiez-tst-frondende:01
-    restart: unless-stopped
-    environment:
-      TZ: Europe/Amsterdam
-    volumes:
-      - .:/app/familiez
-      - /app/familiez/node_modules
+      context: .
+      dockerfile: dockerfile.dev
+    restart: always
     ports:
-      - 8087:5173
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules

@@ -3,7 +3,7 @@
  * Handles all API calls to the middleware (MW) server
  */
 
-const MW_BASE_URL = 'http://localhost:8000';
+const MW_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 /**
  * Get persons with names similar to the search string
@@ -167,5 +167,55 @@ export const updatePerson = async (personId, personData) => {
     } catch (error) {
         console.error('Error updating person:', error);
         return false;
+    }
+};
+/**
+ * Delete a person and all their relationships
+ * @param {number} personId - The ID of the person to delete
+ * @returns {Promise<boolean>} Success status
+ */
+export const deletePerson = async (personId) => {
+    try {
+        const url = `${MW_BASE_URL}/DeletePerson`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ personId }),
+        });
+        const data = await response.json();
+        return data.success || false;
+    } catch (error) {
+        console.error('Error deleting person:', error);
+        return false;
+    }
+};
+
+/**
+ * Add a new person
+ * @param {Object} personData - The person data
+ * @returns {Promise<Object|null>} New person data with ID or null if failed
+ */
+export const addPerson = async (personData) => {
+    try {
+        const url = `${MW_BASE_URL}/AddPerson`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(personData),
+        });
+        const data = await response.json();
+        if (data.success && data.personId) {
+            return { success: true, person: { ...personData, PersonID: data.personId } };
+        }
+
+        console.error('AddPerson failed:', data.error || 'Unknown error');
+        return { success: false, error: data.error || 'Toevoegen mislukt.' };
+    } catch (error) {
+        console.error('Error adding person:', error);
+        return { success: false, error: 'Toevoegen mislukt door een netwerkfout.' };
     }
 };

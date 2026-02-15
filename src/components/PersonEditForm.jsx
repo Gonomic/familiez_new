@@ -111,10 +111,12 @@ const PersonEditForm = ({ person, onSave, onCancel }) => {
 
             <TextField
                 label="Geboortedatum"
+                type="date"
                 value={formData.PersonDateOfBirth}
                 onChange={handleChange('PersonDateOfBirth')}
                 fullWidth
-                placeholder="YYYY-MM-DD"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ max: new Date().toISOString().split('T')[0] }}
             />
 
             <TextField
@@ -126,10 +128,12 @@ const PersonEditForm = ({ person, onSave, onCancel }) => {
 
             <TextField
                 label="Overlijdensdatum"
+                type="date"
                 value={formData.PersonDateOfDeath}
                 onChange={handleChange('PersonDateOfDeath')}
                 fullWidth
-                placeholder="YYYY-MM-DD"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ max: new Date().toISOString().split('T')[0] }}
             />
 
             <TextField

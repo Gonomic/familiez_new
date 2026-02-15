@@ -6,27 +6,33 @@ import { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import debounce from 'lodash/debounce';
 import PersonEditForm from './components/PersonEditForm';
+import PersonDeleteForm from './components/PersonDeleteForm';
+import PersonAddForm from './components/PersonAddForm';
 import { getPersonsLike } from './services/familyDataService';
 
-function RightDrawer({ open, onClose, onPersonSelected, personToEdit, onPersonUpdated }) {
+function RightDrawer({ open, onClose, onPersonSelected, personToEdit, onPersonUpdated, personToDelete, personToAdd, onPersonDeleted }) {
     const navigate = useNavigate();
     const [person, setPerson] = useState(null);
     const [persons, setPersons] = useState([]);
     const [inputValue, setInputValue] = useState("");
     const isSelectingRef = useRef(false);
-    const [mode, setMode] = useState('select'); // 'select' or 'edit'
+    const [mode, setMode] = useState('select'); // 'select', 'edit', 'delete', 'add'
 
     const [nbrOfParentGenerations, setNbrOfParentGenerations] = useState(1);
     const [nbrOfChildGenerations, setNbrOfChildGenerations] = useState(1);
 
-    // Update mode when personToEdit changes
+    // Update mode when personToEdit, personToDelete, or personToAdd changes
     useEffect(() => {
-        if (personToEdit) {
+        if (personToDelete) {
+            setMode('delete');
+        } else if (personToAdd) {
+            setMode('add');
+        } else if (personToEdit) {
             setMode('edit');
         } else {
             setMode('select');
         }
-    }, [personToEdit]);
+    }, [personToEdit, personToDelete, personToAdd]);
 
     // Handle atomic change of Autocomplete field
     const handleInputChange = (event, newInputValue) => {
@@ -76,6 +82,34 @@ function RightDrawer({ open, onClose, onPersonSelected, personToEdit, onPersonUp
         if (onPersonUpdated) {
             onPersonUpdated(null); // Signal that edit was cancelled
         }
+    };
+
+    // Handle person deletion
+    const handlePersonDeleted = () => {
+        setMode('select');
+        if (onPersonDeleted) {
+            onPersonDeleted();
+        }
+        onClose();
+    };
+
+    // Handle canceling delete
+    const handleCancelDelete = () => {
+        setMode('select');
+    };
+
+    // Handle person added
+    const handlePersonAdded = (newPerson) => {
+        setMode('select');
+        if (onPersonUpdated) {
+            onPersonUpdated(newPerson);
+        }
+        onClose();
+    };
+
+    // Handle canceling add
+    const handleCancelAdd = () => {
+        setMode('select');
     };
 
     // Cleanup debounced function on unmount
@@ -147,6 +181,22 @@ function RightDrawer({ open, onClose, onPersonSelected, personToEdit, onPersonUp
                                 Toon Stamboom
                             </Button>
                         </>
+                    ) : mode === 'delete' ? (
+                        <>
+                            <PersonDeleteForm
+                                person={personToDelete}
+                                onDelete={handlePersonDeleted}
+                                onCancel={handleCancelDelete}
+                            />
+                        </>
+                    ) : mode === 'add' ? (
+                        <>
+                            <PersonAddForm
+                                parentPerson={personToAdd}
+                                onAdd={handlePersonAdded}
+                                onCancel={handleCancelAdd}
+                            />
+                        </>
                     ) : (
                         <>
                             <PersonEditForm
@@ -168,6 +218,9 @@ RightDrawer.propTypes = {
     onPersonSelected: PropTypes.func.isRequired,
     personToEdit: PropTypes.object,
     onPersonUpdated: PropTypes.func,
+    personToDelete: PropTypes.object,
+    personToAdd: PropTypes.object,
+    onPersonDeleted: PropTypes.func,
 };
 
 export default RightDrawer;

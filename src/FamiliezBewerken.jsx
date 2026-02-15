@@ -6,7 +6,9 @@ const FamiliezBewerken = ({
     selectedPerson, 
     nbrOfParentGenerations, 
     nbrOfChildGenerations,
-    onEditPerson 
+    onEditPerson,
+    onDeletePerson,
+    onAddPerson
 }) => {
     return (
         <Box sx={{ 
@@ -23,6 +25,8 @@ const FamiliezBewerken = ({
                 nbrOfParentGenerations={nbrOfParentGenerations}
                 nbrOfChildGenerations={nbrOfChildGenerations}
                 onEditPerson={onEditPerson}
+                onDeletePerson={onDeletePerson}
+                onAddPerson={onAddPerson}
             />
         </Box>
     );
@@ -33,6 +37,8 @@ FamiliezBewerken.propTypes = {
     nbrOfParentGenerations: PropTypes.number,
     nbrOfChildGenerations: PropTypes.number,
     onEditPerson: PropTypes.func,
+    onDeletePerson: PropTypes.func,
+    onAddPerson: PropTypes.func,
 };
 
 export default FamiliezBewerken;
